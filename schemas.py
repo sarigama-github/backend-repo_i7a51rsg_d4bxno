@@ -1,48 +1,40 @@
 """
-Database Schemas
+Database Schemas for eCommerce App
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+Each Pydantic model corresponds to a MongoDB collection with the lowercase
+class name as the collection name.
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Collections:
+- category
+- product
+- deliverycharge
+- adminsession (session tokens for admin auth)
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional, List
 
-# Example schemas (replace with your own):
-
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class Category(BaseModel):
+    name: str = Field(..., description="Category display name")
+    slug: str = Field(..., description="URL-friendly unique identifier for the category")
+    description: Optional[str] = Field(None, description="Optional description for the category")
+    is_active: bool = Field(True, description="Whether this category is active")
 
 class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
     title: str = Field(..., description="Product title")
     description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
+    price: float = Field(..., ge=0, description="Price in your currency")
+    category_slug: str = Field(..., description="Slug of the category this product belongs to")
+    image_url: Optional[HttpUrl] = Field(None, description="Public URL to the product image")
     in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class DeliveryRate(BaseModel):
+    location: str = Field(..., description="Location/Zone name (e.g., Inside City, Outside City)")
+    charge: float = Field(..., ge=0, description="Delivery charge for this location")
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class DeliveryCharge(BaseModel):
+    name: str = Field("Standard Delivery", description="Name of this delivery charge table")
+    notes: Optional[str] = Field(None, description="Optional notes shown under the chart")
+    rates: List[DeliveryRate] = Field(default_factory=list, description="List of delivery charges by location/zone")
+
+# Admin session tokens stored in DB (no explicit Pydantic schema required for create/update)
